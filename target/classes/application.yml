@@ -1,0 +1,82 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: donaton-gateway
+
+  cloud:
+    gateway:
+      # -------------------------------------------------------
+      # CORS global
+      # -------------------------------------------------------
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      # -------------------------------------------------------
+      # Rutas
+      # -------------------------------------------------------
+      routes:
+
+        # ms-auth – rutas de autenticación y administración
+        - id: ms-auth-route
+          uri: http://localhost:8083
+          predicates:
+            - Path=/auth/**, /admin/**
+          filters:
+            - name: JwtAuthFilter
+
+        # ms-donaciones – API principal
+        - id: ms-donaciones-route
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/**
+          filters:
+            - name: JwtAuthFilter
+
+        # BFF – Backend For Frontend
+        - id: bff-route
+          uri: http://localhost:8090
+          predicates:
+            - Path=/bff/**
+          filters:
+            - name: JwtAuthFilter
+
+# -------------------------------------------------------
+# JWT
+# -------------------------------------------------------
+jwt:
+  secret: ZG9uYXRvbi1tcy1hdXRoLXNlY3JldC1rZXktZHVvY3VjLWRzeTExMDY=
+  public-paths: /auth/login,/auth/register,/bff/portada,/bff/transparencia,/api/causas
+
+# -------------------------------------------------------
+# Rate limiting (configurado en RateLimitConfig)
+# -------------------------------------------------------
+rate-limit:
+  capacity: 50          # tokens máximos por IP
+  refill-tokens: 50     # tokens que se recargan
+  refill-seconds: 60    # cada cuántos segundos
+
+# -------------------------------------------------------
+# Actuator
+# -------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, gateway
+  endpoint:
+    gateway:
+      enabled: true
