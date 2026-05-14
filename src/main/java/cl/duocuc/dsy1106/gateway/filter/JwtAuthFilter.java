@@ -15,6 +15,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -56,13 +57,36 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 
             // Token válido: propagar claims útiles como cabeceras internas
             Claims claims = jwtUtil.validate(token);
+            String rolesHeader = extractRoles(claims.get("roles"));
+            log.info("JWT válido — subject: {}, roles propagados: {}, path: {}", claims.getSubject(), rolesHeader, path);
             ServerHttpRequest mutatedRequest = request.mutate()
                     .header("X-User-Id", String.valueOf(claims.getSubject()))
-                    .header("X-User-Roles", String.valueOf(claims.get("roles")))
+                    .header("X-User-Roles", rolesHeader)
                     .build();
+
+            log.info("Headers enviados a downstream: X-User-Roles={}, X-User-Id={}",
+                    mutatedRequest.getHeaders().getFirst("X-User-Roles"),
+                    mutatedRequest.getHeaders().getFirst("X-User-Id"));
 
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
         };
+    }
+
+    /**
+     * Normaliza el claim "roles" del JWT a una cadena CSV en mayúsculas.
+     * Maneja tanto String ("ADMIN") como List (["ADMIN","USER"]) que jsonwebtoken
+     * puede retornar según cómo fue generado el token.
+     * Resultado: "ADMIN" o "ADMIN,USER" — sin corchetes ni espacios.
+     */
+    @SuppressWarnings("unchecked")
+    private String extractRoles(Object rolesObj) {
+        if (rolesObj == null) return "";
+        if (rolesObj instanceof List<?> list) {
+            return list.stream()
+                    .map(r -> r.toString().toUpperCase())
+                    .collect(Collectors.joining(","));
+        }
+        return rolesObj.toString().toUpperCase();
     }
 
     private boolean isPublicPath(String path) {

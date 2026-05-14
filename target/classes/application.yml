@@ -8,6 +8,20 @@ spring:
   cloud:
     gateway:
       # -------------------------------------------------------
+      # Filtros globales
+      # -------------------------------------------------------
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      forwarded:
+        enabled: true
+      x-forwarded:
+        enabled: true
+        for-enabled: true
+        host-enabled: true
+        port-enabled: true
+        proto-enabled: true
+
+      # -------------------------------------------------------
       # CORS global
       # -------------------------------------------------------
       globalcors:
@@ -45,6 +59,7 @@ spring:
             - Path=/api/**
           filters:
             - name: JwtAuthFilter
+            - RemoveRequestHeader=Authorization
 
         # BFF – Backend For Frontend
         - id: bff-route
@@ -59,7 +74,7 @@ spring:
 # -------------------------------------------------------
 jwt:
   secret: ZG9uYXRvbi1tcy1hdXRoLXNlY3JldC1rZXktZHVvY3VjLWRzeTExMDY=
-  public-paths: /auth/login,/auth/register,/bff/portada,/bff/transparencia,/api/causas
+  public-paths: /auth/login,/auth/register,/bff/portada,/bff/transparencia,/api/causas,/api/donaciones/ultimas,/api/donaciones/transparencia,/api/donaciones/top,/api/donaciones/total,/api/donaciones/count
 
 # -------------------------------------------------------
 # Rate limiting (configurado en RateLimitConfig)
