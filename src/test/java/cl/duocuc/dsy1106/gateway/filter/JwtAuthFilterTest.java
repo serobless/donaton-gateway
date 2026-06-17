@@ -117,6 +117,53 @@ class JwtAuthFilterTest {
     }
 
     @Test
+    void testPublicPath_withValidToken_propagatesUserHeaders() {
+        String token = buildValidToken("99");
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/testimonios")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        filter.filter(exchange, chain).block();
+
+        verify(chain, times(1)).filter(argThat(ex -> {
+            String userId = ex.getRequest().getHeaders().getFirst("X-User-Id");
+            return "99".equals(userId);
+        }));
+        assertNotEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
+    void testPublicPath_withInvalidToken_returns401() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/testimonios")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer token.invalido.xyz")
+                .build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        filter.filter(exchange, chain).block();
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+        verify(chain, never()).filter(any());
+    }
+
+    @Test
+    void testPublicPath_postWithValidToken_propagatesHeaders() {
+        String token = buildValidToken("user@donaton.cl");
+        MockServerHttpRequest request = MockServerHttpRequest.post("/api/testimonios")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        filter.filter(exchange, chain).block();
+
+        verify(chain, times(1)).filter(argThat(ex -> {
+            String userId = ex.getRequest().getHeaders().getFirst("X-User-Id");
+            return "user@donaton.cl".equals(userId);
+        }));
+        assertNotEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
     void testProtectedPath_malformedToken_returns401() {
         MockServerHttpRequest request = MockServerHttpRequest.get("/api/causas/1")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer token.malformado.xyz")

@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: donaton-gateway
+  codec:
+    max-in-memory-size: 20MB
 
   cloud:
     gateway:
@@ -54,7 +56,7 @@ spring:
 
         # ms-donaciones – API principal
         - id: ms-donaciones-route
-          uri: http://localhost:8081
+          uri: http://localhost:8084
           predicates:
             - Path=/api/**
           filters:

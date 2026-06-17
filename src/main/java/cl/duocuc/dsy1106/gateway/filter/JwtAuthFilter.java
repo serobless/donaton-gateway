@@ -36,14 +36,34 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
             String path = request.getURI().getPath();
+            String method = request.getMethod() != null ? request.getMethod().name() : "GET";
 
-            // Rutas públicas: dejar pasar sin validar
+            String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
             if (isPublicPath(path)) {
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    String token = authHeader.substring(7);
+                    if (jwtUtil.isValid(token)) {
+                        Claims claims = jwtUtil.validate(token);
+                        String rolesHeader = extractRoles(claims.get("roles"));
+                        String nombreClaim = claims.get("nombre", String.class);
+                        log.info("[GATEWAY] Ruta pública {} {}: token válido, subject={}, roles={}",
+                                method, path, claims.getSubject(), rolesHeader);
+                        ServerHttpRequest mutatedRequest = request.mutate()
+                                .header("X-User-Id", String.valueOf(claims.getSubject()))
+                                .header("X-User-Roles", rolesHeader)
+                                .header("X-User-Name", nombreClaim != null ? nombreClaim : "")
+                                .build();
+                        return chain.filter(exchange.mutate().request(mutatedRequest).build());
+                    }
+                    log.warn("[GATEWAY] Token inválido en ruta pública: {} {} — forzando re-login", method, path);
+                    return unauthorized(exchange);
+                }
+                log.debug("[GATEWAY] Ruta pública {} {}: sin token, acceso anónimo", method, path);
                 return chain.filter(exchange);
             }
 
-            // Verificar cabecera Authorization
-            String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            // Rutas protegidas: exigir token válido
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 log.warn("Missing or malformed Authorization header for path: {}", path);
                 return unauthorized(exchange);
@@ -58,10 +78,12 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
             // Token válido: propagar claims útiles como cabeceras internas
             Claims claims = jwtUtil.validate(token);
             String rolesHeader = extractRoles(claims.get("roles"));
+            String nombreClaim = claims.get("nombre", String.class);
             log.info("JWT válido — subject: {}, roles propagados: {}, path: {}", claims.getSubject(), rolesHeader, path);
             ServerHttpRequest mutatedRequest = request.mutate()
                     .header("X-User-Id", String.valueOf(claims.getSubject()))
                     .header("X-User-Roles", rolesHeader)
+                    .header("X-User-Name", nombreClaim != null ? nombreClaim : "")
                     .build();
 
             log.info("Headers enviados a downstream: X-User-Roles={}, X-User-Id={}",
@@ -78,7 +100,6 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
      * puede retornar según cómo fue generado el token.
      * Resultado: "ADMIN" o "ADMIN,USER" — sin corchetes ni espacios.
      */
-    @SuppressWarnings("unchecked")
     private String extractRoles(Object rolesObj) {
         if (rolesObj == null) return "";
         if (rolesObj instanceof List<?> list) {
