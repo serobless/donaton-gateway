@@ -56,8 +56,8 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
                                 .build();
                         return chain.filter(exchange.mutate().request(mutatedRequest).build());
                     }
-                    log.warn("[GATEWAY] Token inválido en ruta pública: {} {} — forzando re-login", method, path);
-                    return unauthorized(exchange);
+                    log.warn("[GATEWAY] Token inválido en ruta pública: {} {} — permitiendo acceso anónimo", method, path);
+                    return chain.filter(exchange);
                 }
                 log.debug("[GATEWAY] Ruta pública {} {}: sin token, acceso anónimo", method, path);
                 return chain.filter(exchange);

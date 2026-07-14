@@ -77,14 +77,14 @@ spring:
 # -------------------------------------------------------
 jwt:
   secret: ZG9uYXRvbi1tcy1hdXRoLXNlY3JldC1rZXktZHVvY3VjLWRzeTExMDY=
-  public-paths: /auth/login,/auth/register,/bff/portada,/bff/transparencia,/api/causas,/api/donaciones/ultimas,/api/donaciones/transparencia,/api/donaciones/top,/api/donaciones/total,/api/donaciones/count,/api/testimonios,/api/centros,/api/necesidades
+  public-paths: /auth/login,/auth/register,/bff/portada,/bff/transparencia,/api/causas,/api/donaciones/ultimas,/api/donaciones/transparencia,/api/donaciones/top,/api/donaciones/total,/api/donaciones/count,/api/testimonios,/api/centros,/api/necesidades,/api/imagenes/uploads
 
 # -------------------------------------------------------
 # Rate limiting (configurado en RateLimitConfig)
 # -------------------------------------------------------
 rate-limit:
-  capacity: 50          # tokens máximos por IP
-  refill-tokens: 50     # tokens que se recargan
+  capacity: 300         # tokens máximos por IP
+  refill-tokens: 300    # tokens que se recargan
   refill-seconds: 60    # cada cuántos segundos
 
 # -------------------------------------------------------
