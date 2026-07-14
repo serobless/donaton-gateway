@@ -1,0 +1,100 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: donaton-gateway
+  codec:
+    max-in-memory-size: 20MB
+
+  cloud:
+    gateway:
+      # -------------------------------------------------------
+      # Filtros globales
+      # -------------------------------------------------------
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      forwarded:
+        enabled: true
+      x-forwarded:
+        enabled: true
+        for-enabled: true
+        host-enabled: true
+        port-enabled: true
+        proto-enabled: true
+
+      # -------------------------------------------------------
+      # CORS global
+      # -------------------------------------------------------
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      # -------------------------------------------------------
+      # Rutas
+      # -------------------------------------------------------
+      routes:
+
+        # ms-auth – rutas de autenticación y administración
+        - id: ms-auth-route
+          uri: http://localhost:8083
+          predicates:
+            - Path=/auth/**, /admin/**
+          filters:
+            - name: JwtAuthFilter
+
+        # ms-donaciones – API principal
+        - id: ms-donaciones-route
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/**
+          filters:
+            - name: JwtAuthFilter
+            - RemoveRequestHeader=Authorization
+
+        # BFF – Backend For Frontend
+        - id: bff-route
+          uri: http://localhost:8090
+          predicates:
+            - Path=/bff/**
+          filters:
+            - name: JwtAuthFilter
+
+# -------------------------------------------------------
+# JWT
+# -------------------------------------------------------
+jwt:
+  secret: ZG9uYXRvbi1tcy1hdXRoLXNlY3JldC1rZXktZHVvY3VjLWRzeTExMDY=
+  public-paths: /auth/login,/auth/register,/bff/portada,/bff/transparencia,/api/causas,/api/donaciones/ultimas,/api/donaciones/transparencia,/api/donaciones/top,/api/donaciones/total,/api/donaciones/count,/api/testimonios,/api/centros,/api/necesidades,/api/imagenes/uploads
+
+# -------------------------------------------------------
+# Rate limiting (configurado en RateLimitConfig)
+# -------------------------------------------------------
+rate-limit:
+  capacity: 300         # tokens máximos por IP
+  refill-tokens: 300    # tokens que se recargan
+  refill-seconds: 60    # cada cuántos segundos
+
+# -------------------------------------------------------
+# Actuator
+# -------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, gateway
+  endpoint:
+    gateway:
+      enabled: true
