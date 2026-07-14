@@ -31,6 +31,8 @@ spring:
           '[/**]':
             allowedOrigins:
               - "http://localhost:5173"
+              - "https://donaton-frontend.vercel.app"
+              - "https://donaton-frontend-git-main-serobless1.vercel.app"
             allowedMethods:
               - GET
               - POST
@@ -49,7 +51,7 @@ spring:
 
         # ms-auth – rutas de autenticación y administración
         - id: ms-auth-route
-          uri: http://localhost:8083
+          uri: ${MS_AUTH_URL:http://localhost:8083}
           predicates:
             - Path=/auth/**, /admin/**
           filters:
@@ -57,7 +59,7 @@ spring:
 
         # ms-donaciones – API principal
         - id: ms-donaciones-route
-          uri: http://localhost:8084
+          uri: ${MS_DONACIONES_URL:http://localhost:8084}
           predicates:
             - Path=/api/**
           filters:
@@ -66,7 +68,7 @@ spring:
 
         # BFF – Backend For Frontend
         - id: bff-route
-          uri: http://localhost:8090
+          uri: ${MS_BFF_URL:http://localhost:8090}
           predicates:
             - Path=/bff/**
           filters:
